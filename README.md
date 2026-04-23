@@ -1,4 +1,4 @@
-# YouTube Subtitle Fix
+# YouTube Subtitle Fix - Smart Line-Wrapping - Better Readability
 
 Improves how YouTube subtitles look and behave with smarter line wrapping, better readability, optional per-line background boxes, and cleaner handling of translator notes.
 
