@@ -374,6 +374,7 @@
         container.style.right = '0';
         container.style.width = '100%';
         container.style.display = 'flex';
+        container.style.flexDirection = 'column';
         container.style.justifyContent = 'center';
         container.style.alignItems = 'flex-end';
         container.style.pointerEvents = 'none';
@@ -383,16 +384,21 @@
         container.style.padding = '0';
         container.style.transform = 'none';
         container.style.translate = 'none';
+        container.style.setProperty('align-items', 'center', 'important');
+        container.style.setProperty('justify-content', 'flex-end', 'important');
+        container.style.setProperty('transform', 'none', 'important');
+        container.style.setProperty('translate', 'none', 'important');
     }
 
     function applyCaptionStyles(caption, raisePx) {
         caption.style.position = 'relative';
-        caption.style.left = '0';
-        caption.style.right = '0';
-        caption.style.top = '0';
-        caption.style.bottom = '0';
+        caption.style.setProperty('left', 'auto', 'important');
+        caption.style.setProperty('right', 'auto', 'important');
+        caption.style.setProperty('top', 'auto', 'important');
+        caption.style.setProperty('bottom', 'auto', 'important');
         caption.style.margin = '0 auto';
         caption.style.textAlign = 'center';
+        caption.style.alignSelf = 'center';
         caption.style.width = 'fit-content';
         caption.style.maxWidth = `${SETTINGS.maxWidthPercent}%`;
         caption.style.display = 'table';
@@ -418,6 +424,12 @@
 
             textNode.style.display = SETTINGS.perLineBackground ? 'inline' : 'block';
             textNode.style.textAlign = 'center';
+            textNode.style.setProperty('left', 'auto', 'important');
+            textNode.style.setProperty('right', 'auto', 'important');
+            textNode.style.setProperty('top', 'auto', 'important');
+            textNode.style.setProperty('bottom', 'auto', 'important');
+            textNode.style.setProperty('transform', 'none', 'important');
+            textNode.style.setProperty('translate', 'none', 'important');
             textNode.style.whiteSpace = 'pre-wrap';
             textNode.style.wordBreak = 'normal';
             textNode.style.overflowWrap = 'break-word';
@@ -440,6 +452,12 @@
             el.style.color = SETTINGS.textColor;
             el.style.textShadow = SETTINGS.textShadow;
             el.style.textAlign = 'center';
+            el.style.setProperty('left', 'auto', 'important');
+            el.style.setProperty('right', 'auto', 'important');
+            el.style.setProperty('top', 'auto', 'important');
+            el.style.setProperty('bottom', 'auto', 'important');
+            el.style.setProperty('transform', 'none', 'important');
+            el.style.setProperty('translate', 'none', 'important');
             el.style.background = 'transparent';
             el.style.padding = '0';
             el.style.borderRadius = '0';
