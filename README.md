@@ -74,6 +74,16 @@ perLineBackground: true,
 - Final behavior can still depend on how YouTube renders captions internally.
 - Best results usually come from adjusting `maxWidthPercent`, `maxCharsPerLine`, and `lineHeight` together.
 
+## Screenshots
+
+<img width="1894" height="1030" alt="image" src="https://github.com/user-attachments/assets/77635209-86fd-448c-b322-f5e034f40398" />
+
+
+
+
+<img width="1907" height="1052" alt="image" src="https://github.com/user-attachments/assets/eac8d517-537e-4f31-862d-69f4841ff0b9" />
+
+
 ## Greasy Fork
 
 [Greasy Fork script page](https://greasyfork.org/en/scripts/575046-youtube-subtitle-fix-smart-line-wrapping-better-readability)
