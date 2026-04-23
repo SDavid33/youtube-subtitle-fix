@@ -74,14 +74,18 @@ perLineBackground: true,
 - Final behavior can still depend on how YouTube renders captions internally.
 - Best results usually come from adjusting `maxWidthPercent`, `maxCharsPerLine`, and `lineHeight` together.
 
-## Screenshots
+
+## Preview
+
+Before: Default YouTube subtitle layout.
+
+<img width="1911" height="997" alt="image" src="https://github.com/user-attachments/assets/63822a7b-f936-47ed-9a3d-6bba17ff6563" />
+
+
+After: Smarter line wrapping, cleaner subtitle layout, and better readability.
+
 
 <img width="1894" height="1030" alt="image" src="https://github.com/user-attachments/assets/77635209-86fd-448c-b322-f5e034f40398" />
-
-
-
-
-<img width="1907" height="1052" alt="image" src="https://github.com/user-attachments/assets/eac8d517-537e-4f31-862d-69f4841ff0b9" />
 
 
 ## Greasy Fork
