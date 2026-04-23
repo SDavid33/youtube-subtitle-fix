@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Subtitle Fix - Smart Line Wrapping & Better Readability
 // @namespace    https://greasyfork.org/en/scripts/575046-youtube-subtitle-fix-smart-line-wrapping-better-readability
-// @version      1.0.3
+// @version      1.0.4
 // @description  Improves YouTube subtitles with smarter line wrapping, per-line background, better readability, cleaner layout, and translator note support.
 // @match        https://www.youtube.com/*
 // @grant        none
@@ -154,6 +154,16 @@
             .html5-video-player .ytp-caption-window-container {
                 text-align: center !important;
                 pointer-events: none !important;
+                position: absolute !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: flex-end !important;
+                transform: none !important;
+                translate: none !important;
             }
 
             .html5-video-player .caption-window {
@@ -162,10 +172,23 @@
                 padding: ${SETTINGS.paddingY}em ${SETTINGS.paddingX}em !important;
                 text-align: center !important;
                 max-width: ${SETTINGS.maxWidthPercent}% !important;
+                left: auto !important;
+                right: auto !important;
+                top: auto !important;
+                bottom: auto !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                align-self: center !important;
             }
 
             .html5-video-player .captions-text {
                 text-align: center !important;
+                left: auto !important;
+                right: auto !important;
+                top: auto !important;
+                bottom: auto !important;
+                transform: none !important;
+                translate: none !important;
                 white-space: pre-wrap !important;
                 word-break: normal !important;
                 overflow-wrap: break-word !important;
@@ -175,6 +198,12 @@
             .html5-video-player .caption-visual-line,
             .html5-video-player .captions-text span,
             .html5-video-player .caption-window span {
+                left: auto !important;
+                right: auto !important;
+                top: auto !important;
+                bottom: auto !important;
+                transform: none !important;
+                translate: none !important;
                 background: transparent !important;
                 padding: 0 !important;
                 border-radius: 0 !important;
