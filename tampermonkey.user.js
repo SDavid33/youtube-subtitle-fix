@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Subtitle Fix - Smart Line Wrapping & Better Readability
 // @namespace    https://greasyfork.org/en/scripts/575046-youtube-subtitle-fix-smart-line-wrapping-better-readability
-// @version      1.0.0
+// @version      1.0.1
 // @description  Improves YouTube subtitles with smarter line wrapping, per-line background, better readability, cleaner layout, and translator note support.
 // @match        https://www.youtube.com/*
 // @grant        none
@@ -103,6 +103,8 @@
     let captionObserver = null;
     let rafId = null;
     let stylesInjected = false;
+    let observersPaused = false;
+    let observerResumeId = null;
 
     function injectStyles() {
         if (stylesInjected && document.getElementById(STYLE_ID)) return;
@@ -423,7 +425,7 @@
             textNode.style.setProperty('-webkit-box-decoration-break', SETTINGS.perLineBackground ? 'clone' : 'slice');
         }
 
-        const all = caption.querySelectorAll('.ytp-caption-segment, .captions-text, .caption-visual-line, .captions-text span, .caption-window span');
+        const all = caption.querySelectorAll('.ytp-caption-segment, .caption-visual-line, .captions-text span, .caption-window span');
         for (const el of all) {
             el.style.fontSize = `${fontSize}px`;
             el.style.lineHeight = String(SETTINGS.lineHeight);
@@ -444,6 +446,9 @@
         const caption = getCaption(player);
         if (!container || !caption) return;
 
+        observersPaused = true;
+        if (observerResumeId) clearTimeout(observerResumeId);
+
         const full = isFullscreen(player);
         applyTextStyles(caption, full);
         const lineCount = countVisualLines(caption);
@@ -451,9 +456,16 @@
 
         applyContainerStyles(container);
         applyCaptionStyles(caption, raisePx);
+
+        observerResumeId = setTimeout(() => {
+            observersPaused = false;
+            observerResumeId = null;
+        }, 0);
     }
 
     function scheduleProcess() {
+        if (observersPaused) return;
+
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
             rafId = null;
@@ -471,6 +483,7 @@
         if (captionObserver) captionObserver.disconnect();
 
         captionObserver = new MutationObserver(() => {
+            if (observersPaused) return;
             scheduleProcess();
         });
 
@@ -492,6 +505,7 @@
         if (playerObserver) playerObserver.disconnect();
 
         playerObserver = new MutationObserver(() => {
+            if (observersPaused) return;
             attachCaptionObserver();
             scheduleProcess();
         });
