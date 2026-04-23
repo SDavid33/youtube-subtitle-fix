@@ -1,0 +1,516 @@
+(function () {
+    'use strict';
+
+    /*
+      SETTINGS guide
+
+      textColor:
+      Subtitle text color in hex format.
+
+      backgroundColor:
+      Background color as RGB values, for example '0, 0, 0' for black.
+
+      backgroundOpacity:
+      Background transparency from 0 to 1.
+
+      fontSizeNormal / fontSizeFullscreen:
+      Subtitle font size for normal and fullscreen mode.
+
+      lineHeight:
+      Line spacing between subtitle rows.
+      Recommended: 1.20 - 1.35
+
+      maxWidthPercent:
+      Maximum subtitle box width relative to the video width.
+      Lower value = narrower subtitle box, more wrapping.
+      Higher value = wider subtitle box, fewer wraps.
+      Recommended: 72 - 82
+
+      enableAutoLineBreaks:
+      Turns the smart auto line wrapping on or off.
+      Keep this true if you want the wrapping rules below to work.
+
+      maxCharsPerLine:
+      Target line length used by the smart wrapper.
+      Lower value = more aggressive wrapping.
+      Higher value = longer lines, fewer breaks.
+      Recommended: 40 - 48
+
+      perLineBackground:
+      true = each subtitle line gets its own background width
+      false = one large shared background box
+
+      paddingY / paddingX:
+      Inner spacing inside the subtitle background.
+
+      borderRadius:
+      Corner roundness of the subtitle background.
+
+      offsetNormal / offsetFullscreen:
+      Vertical raise from the bottom in normal and fullscreen mode.
+
+      extraPerLine:
+      Extra upward offset added for each additional subtitle line.
+
+      textShadow:
+      Outline/shadow around the subtitle text.
+
+      Good safe preset:
+      lineHeight: 1.20
+      maxWidthPercent: 78
+      enableAutoLineBreaks: true
+      maxCharsPerLine: 44
+      perLineBackground: true
+    */
+    const SETTINGS = {
+        textColor: '#ffb330',
+        backgroundColor: '0, 0, 0',
+        backgroundOpacity: 1,
+
+        fontSizeNormal: 32,
+        fontSizeFullscreen: 42,
+
+        lineHeight: 1.35,
+        maxWidthPercent: 75,
+        enableAutoLineBreaks: true,
+        maxCharsPerLine: 45,
+        perLineBackground: true,
+
+        paddingY: 0.20,
+        paddingX: 0.40,
+        borderRadius: 4,
+
+        offsetNormal: 50,
+        offsetFullscreen: 80,
+        extraPerLine: 5,
+
+        textShadow: '0 0 2px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1)'
+    };
+
+    const STYLE_ID = 'yt-subtitle-full-control-style';
+
+    let playerObserver = null;
+    let captionObserver = null;
+    let rafId = null;
+    let stylesInjected = false;
+
+    function injectStyles() {
+        if (stylesInjected && document.getElementById(STYLE_ID)) return;
+
+        let style = document.getElementById(STYLE_ID);
+
+        if (!style) {
+            style = document.createElement('style');
+            style.id = STYLE_ID;
+            document.head.appendChild(style);
+        }
+
+        style.textContent = `
+            .html5-video-player .ytp-caption-window-container,
+            .html5-video-player .caption-window,
+            .html5-video-player .captions-text,
+            .html5-video-player .caption-visual-line,
+            .html5-video-player .ytp-caption-segment,
+            .html5-video-player .captions-text span,
+            .html5-video-player .caption-window span {
+                color: ${SETTINGS.textColor} !important;
+                text-shadow: ${SETTINGS.textShadow} !important;
+                line-height: ${SETTINGS.lineHeight} !important;
+            }
+
+            .html5-video-player .captions-text,
+            .html5-video-player .caption-visual-line,
+            .html5-video-player .ytp-caption-segment,
+            .html5-video-player .captions-text span,
+            .html5-video-player .caption-window span {
+                font-size: ${SETTINGS.fontSizeNormal}px !important;
+            }
+
+            .html5-video-player.ytp-fullscreen .captions-text,
+            .html5-video-player.ytp-fullscreen .caption-visual-line,
+            .html5-video-player.ytp-fullscreen .ytp-caption-segment,
+            .html5-video-player.ytp-fullscreen .captions-text span,
+            .html5-video-player.ytp-fullscreen .caption-window span {
+                font-size: ${SETTINGS.fontSizeFullscreen}px !important;
+            }
+
+            .html5-video-player .ytp-caption-window-container {
+                text-align: center !important;
+                pointer-events: none !important;
+            }
+
+            .html5-video-player .caption-window {
+                background: rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity}) !important;
+                border-radius: ${SETTINGS.borderRadius}px !important;
+                padding: ${SETTINGS.paddingY}em ${SETTINGS.paddingX}em !important;
+                text-align: center !important;
+                max-width: ${SETTINGS.maxWidthPercent}% !important;
+            }
+
+            .html5-video-player .captions-text {
+                text-align: center !important;
+                white-space: pre-wrap !important;
+                word-break: normal !important;
+                overflow-wrap: break-word !important;
+            }
+
+            .html5-video-player .ytp-caption-segment,
+            .html5-video-player .caption-visual-line,
+            .html5-video-player .captions-text span,
+            .html5-video-player .caption-window span {
+                background: transparent !important;
+                padding: 0 !important;
+                border-radius: 0 !important;
+            }
+        `;
+
+        stylesInjected = true;
+    }
+
+    function getPlayer() {
+        return document.querySelector('.html5-video-player');
+    }
+
+    function getContainer(player) {
+        return player?.querySelector('.ytp-caption-window-container') || null;
+    }
+
+    function getCaption(player) {
+        return player?.querySelector('.caption-window') || null;
+    }
+
+    function getCaptionsText(caption) {
+        return caption?.querySelector('.captions-text') || null;
+    }
+
+    function isFullscreen(player) {
+        return !!player?.classList.contains('ytp-fullscreen');
+    }
+
+    function countVisualLines(caption) {
+        if (!caption) return 1;
+
+        const textNode = getCaptionsText(caption);
+        if (textNode) {
+            const txt = (textNode.innerText || '').trim();
+            if (txt) {
+                const lines = txt.split('\n').map(v => v.trim()).filter(Boolean);
+                if (lines.length > 0) return lines.length;
+            }
+        }
+
+        const visualLines = caption.querySelectorAll('.caption-visual-line');
+        if (visualLines.length > 0) return visualLines.length;
+
+        const segs = caption.querySelectorAll('.ytp-caption-segment');
+        return Math.max(segs.length, 1);
+    }
+
+    function computeRaise(full, lineCount) {
+        const base = full ? SETTINGS.offsetFullscreen : SETTINGS.offsetNormal;
+        return base + (lineCount - 1) * SETTINGS.extraPerLine;
+    }
+
+    function joinWords(words, start, end) {
+        return words.slice(start, end).join(' ').trim();
+    }
+
+    function tokenizePreservingNotes(line) {
+        return line.match(/\[[^\]]+\]|\S+/g) || [];
+    }
+
+    function isTranslatorNoteLine(line) {
+        return /^\[[\s\S]+\]$/.test(String(line || '').trim());
+    }
+
+    function isWeakLineStart(word) {
+        return /^(and|or|but|so|yet|for|nor|to|of|in|on|at|by|with|from|into|onto|than|that|who|which|because)$/i.test(word);
+    }
+
+    function isWeakLineEnd(word) {
+        return /^(a|an|the|and|or|but|so|yet|for|nor|to|of|in|on|at|by|with|from|into|onto|than|that)$/i.test(word);
+    }
+
+    function getLinePenalty(text, softMax) {
+        if (!text) return 100000;
+
+        const words = text.split(/\s+/).filter(Boolean);
+        const firstWord = words[0] || '';
+        const lastWord = words[words.length - 1] || '';
+        let penalty = Math.abs(text.length - softMax) * 0.35;
+
+        if (text.length > softMax) penalty += (text.length - softMax) * 1.6;
+        if (text.length < Math.max(10, Math.floor(softMax * 0.4))) penalty += 25;
+        if (isWeakLineStart(firstWord)) penalty += 18;
+        if (isWeakLineEnd(lastWord)) penalty += 12;
+        if (/^[)\],.!?:;]/.test(firstWord)) penalty += 30;
+        if (/[(\[{'"-]$/.test(lastWord)) penalty += 18;
+
+        return penalty;
+    }
+
+    function chooseBreaks(words, lineCount, softMax) {
+        const totalWords = words.length;
+        const memo = new Map();
+
+        function solve(startIndex, linesLeft) {
+            const key = `${startIndex}:${linesLeft}`;
+            if (memo.has(key)) return memo.get(key);
+
+            if (linesLeft === 1) {
+                const text = joinWords(words, startIndex, totalWords);
+                const result = {
+                    score: getLinePenalty(text, softMax),
+                    lines: [text]
+                };
+                memo.set(key, result);
+                return result;
+            }
+
+            let best = null;
+            const minBreak = startIndex + 1;
+            const maxBreak = totalWords - (linesLeft - 1);
+
+            for (let breakIndex = minBreak; breakIndex <= maxBreak; breakIndex++) {
+                const current = joinWords(words, startIndex, breakIndex);
+                const remaining = solve(breakIndex, linesLeft - 1);
+                if (!current || !remaining.lines.length) continue;
+
+                const lengths = [current.length, ...remaining.lines.map(line => line.length)];
+                const balancePenalty = Math.max(...lengths) - Math.min(...lengths);
+                const score = getLinePenalty(current, softMax) + remaining.score + balancePenalty * 0.75;
+
+                if (!best || score < best.score) {
+                    best = {
+                        score,
+                        lines: [current, ...remaining.lines]
+                    };
+                }
+            }
+
+            const fallback = best || {
+                score: 100000,
+                lines: [joinWords(words, startIndex, totalWords)]
+            };
+
+            memo.set(key, fallback);
+            return fallback;
+        }
+
+        return solve(0, lineCount).lines.filter(Boolean);
+    }
+
+    function wrapLine(line, maxChars) {
+        const trimmed = line.trim().replace(/\s+/g, ' ');
+        if (!trimmed || trimmed.length <= maxChars) return [trimmed];
+
+        const words = tokenizePreservingNotes(trimmed);
+        if (words.length < 2) return [trimmed];
+
+        const softTwoLineLimit = Math.round(maxChars * 2.35);
+        const preferredLines = trimmed.length <= softTwoLineLimit ? 2 : Math.min(3, Math.max(2, Math.ceil(trimmed.length / maxChars)));
+        const wrapped = chooseBreaks(words, preferredLines, maxChars);
+
+        return wrapped.length ? wrapped : [trimmed];
+    }
+
+    function buildWrappedText(text) {
+        const maxChars = SETTINGS.maxCharsPerLine;
+        const sourceLines = String(text || '')
+            .replace(/\r/g, '')
+            .split('\n')
+            .map(v => v.trim())
+            .filter(Boolean);
+
+        if (!sourceLines.length) return '';
+
+        const hasStandaloneTranslatorNote = sourceLines.some(isTranslatorNoteLine);
+        const preserveExistingTwoLineLayout = hasStandaloneTranslatorNote && sourceLines.length >= 2;
+
+        return sourceLines
+            .flatMap(line => {
+                if (!SETTINGS.enableAutoLineBreaks) return [line];
+                if (preserveExistingTwoLineLayout) return [line];
+                return wrapLine(line, maxChars);
+            })
+            .join('\n');
+    }
+
+    function getDisplayText(caption) {
+        const textNode = getCaptionsText(caption);
+        if (!textNode) return '';
+
+        const visualLines = Array.from(caption.querySelectorAll('.caption-visual-line'))
+            .map(line => (line.innerText || '').trim())
+            .filter(Boolean);
+
+        if (visualLines.length > 0) {
+            return buildWrappedText(visualLines.join('\n'));
+        }
+
+        return buildWrappedText(textNode.innerText || textNode.textContent || '');
+    }
+
+    function applyContainerStyles(container) {
+        container.style.position = 'absolute';
+        container.style.left = '0';
+        container.style.right = '0';
+        container.style.width = '100%';
+        container.style.display = 'flex';
+        container.style.justifyContent = 'center';
+        container.style.alignItems = 'flex-end';
+        container.style.pointerEvents = 'none';
+        container.style.textAlign = 'center';
+        container.style.bottom = '0';
+        container.style.margin = '0';
+        container.style.padding = '0';
+        container.style.transform = 'none';
+        container.style.translate = 'none';
+    }
+
+    function applyCaptionStyles(caption, raisePx) {
+        caption.style.position = 'relative';
+        caption.style.left = '0';
+        caption.style.right = '0';
+        caption.style.top = '0';
+        caption.style.bottom = '0';
+        caption.style.margin = '0 auto';
+        caption.style.textAlign = 'center';
+        caption.style.width = 'fit-content';
+        caption.style.maxWidth = `${SETTINGS.maxWidthPercent}%`;
+        caption.style.display = 'table';
+        caption.style.transform = `translateY(-${raisePx}px)`;
+        caption.style.translate = 'none';
+        caption.style.background = SETTINGS.perLineBackground ? 'transparent' : `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})`;
+        caption.style.padding = SETTINGS.perLineBackground ? '0' : `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em`;
+        caption.style.borderRadius = SETTINGS.perLineBackground ? '0' : `${SETTINGS.borderRadius}px`;
+    }
+
+    function applyTextStyles(caption, full) {
+        const fontSize = full ? SETTINGS.fontSizeFullscreen : SETTINGS.fontSizeNormal;
+        const textNode = getCaptionsText(caption);
+
+        if (textNode) {
+            const displayText = getDisplayText(caption);
+            if (displayText && textNode.textContent !== displayText) {
+                textNode.textContent = displayText;
+            }
+
+            textNode.style.display = SETTINGS.perLineBackground ? 'inline' : 'block';
+            textNode.style.textAlign = 'center';
+            textNode.style.whiteSpace = 'pre-wrap';
+            textNode.style.wordBreak = 'normal';
+            textNode.style.overflowWrap = 'break-word';
+            textNode.style.fontSize = `${fontSize}px`;
+            textNode.style.lineHeight = String(SETTINGS.lineHeight);
+            textNode.style.color = SETTINGS.textColor;
+            textNode.style.textShadow = SETTINGS.textShadow;
+            textNode.style.background = SETTINGS.perLineBackground ? `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})` : 'transparent';
+            textNode.style.padding = SETTINGS.perLineBackground ? `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em` : '0';
+            textNode.style.borderRadius = SETTINGS.perLineBackground ? `${SETTINGS.borderRadius}px` : '0';
+            textNode.style.margin = SETTINGS.perLineBackground ? '0' : '0 auto';
+            textNode.style.boxDecorationBreak = SETTINGS.perLineBackground ? 'clone' : 'slice';
+            textNode.style.setProperty('-webkit-box-decoration-break', SETTINGS.perLineBackground ? 'clone' : 'slice');
+        }
+
+        const all = caption.querySelectorAll('.ytp-caption-segment, .captions-text, .caption-visual-line, .captions-text span, .caption-window span');
+        for (const el of all) {
+            el.style.fontSize = `${fontSize}px`;
+            el.style.lineHeight = String(SETTINGS.lineHeight);
+            el.style.color = SETTINGS.textColor;
+            el.style.textShadow = SETTINGS.textShadow;
+            el.style.textAlign = 'center';
+            el.style.background = 'transparent';
+            el.style.padding = '0';
+            el.style.borderRadius = '0';
+        }
+    }
+
+    function processSubtitles() {
+        const player = getPlayer();
+        if (!player) return;
+
+        const container = getContainer(player);
+        const caption = getCaption(player);
+        if (!container || !caption) return;
+
+        const full = isFullscreen(player);
+        applyTextStyles(caption, full);
+        const lineCount = countVisualLines(caption);
+        const raisePx = computeRaise(full, lineCount);
+
+        applyContainerStyles(container);
+        applyCaptionStyles(caption, raisePx);
+    }
+
+    function scheduleProcess() {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            processSubtitles();
+        });
+    }
+
+    function attachCaptionObserver() {
+        const player = getPlayer();
+        if (!player) return;
+
+        const container = getContainer(player);
+        if (!container) return;
+
+        if (captionObserver) captionObserver.disconnect();
+
+        captionObserver = new MutationObserver(() => {
+            scheduleProcess();
+        });
+
+        captionObserver.observe(container, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+
+        scheduleProcess();
+    }
+
+    function init() {
+        injectStyles();
+
+        const player = getPlayer();
+        if (!player) return false;
+
+        if (playerObserver) playerObserver.disconnect();
+
+        playerObserver = new MutationObserver(() => {
+            attachCaptionObserver();
+            scheduleProcess();
+        });
+
+        playerObserver.observe(player, {
+            childList: true,
+            subtree: true,
+            attributes: false
+        });
+
+        attachCaptionObserver();
+        scheduleProcess();
+        return true;
+    }
+
+    injectStyles();
+
+    const wait = setInterval(() => {
+        if (init()) clearInterval(wait);
+    }, 500);
+
+    document.addEventListener('fullscreenchange', () => {
+        scheduleProcess();
+        setTimeout(scheduleProcess, 150);
+    });
+
+    window.addEventListener('yt-navigate-finish', () => {
+        injectStyles();
+        setTimeout(init, 200);
+        setTimeout(scheduleProcess, 500);
+    });
+})();
