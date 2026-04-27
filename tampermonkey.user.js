@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name         YouTube Subtitle Fix - Smart Line Wrapping & Better Readability
 // @namespace    https://greasyfork.org/en/scripts/575046-youtube-subtitle-fix-smart-line-wrapping-better-readability
-// @version      1.0.4
+// @version      1.2.0
 // @description  Improves YouTube subtitles with smarter line wrapping, per-line background, better readability, cleaner layout, and translator note support.
 // @match        https://www.youtube.com/*
-// @grant        none
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -25,6 +27,18 @@
 
       fontSizeNormal / fontSizeFullscreen:
       Subtitle font size for normal and fullscreen mode.
+
+      subtitleSizeMode:
+      'default' = use YouTube's own subtitle size
+      'script' = use the script's built-in subtitle size
+      'custom' = use user-saved subtitle size values
+
+      preferYouTubeSizeInSmallPlayers:
+      true = use YouTube default size in previews, mini player, and small players
+      false = always use the selected subtitle size mode everywhere
+
+      customFontSizeNormal / customFontSizeFullscreen:
+      User-saved subtitle size values used in custom mode.
 
       lineHeight:
       Line spacing between subtitle rows.
@@ -76,13 +90,17 @@
       maxCharsPerLine: 44
       perLineBackground: true
     */
-    const SETTINGS = {
+    const DEFAULT_SETTINGS = {
         textColor: '#ffb330',
         backgroundColor: '0, 0, 0',
         backgroundOpacity: 1,
 
         fontSizeNormal: 32,
         fontSizeFullscreen: 42,
+        subtitleSizeMode: 'script',
+        preferYouTubeSizeInSmallPlayers: true,
+        customFontSizeNormal: 32,
+        customFontSizeFullscreen: 42,
 
         lineHeight: 1.35,
         maxWidthPercent: 75,
@@ -101,6 +119,11 @@
 
         textShadow: '0 0 2px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1)'
     };
+    const SETTINGS_STORAGE_KEY = 'ytSubtitleFixSettings';
+    const SETTINGS = {
+        ...DEFAULT_SETTINGS,
+        ...loadSavedSettings()
+    };
 
     const STYLE_ID = 'yt-subtitle-full-control-style';
 
@@ -110,6 +133,139 @@
     let stylesInjected = false;
     let observersPaused = false;
     let observerResumeId = null;
+
+    function loadSavedSettings() {
+        try {
+            if (typeof GM_getValue === 'function') {
+                const raw = GM_getValue(SETTINGS_STORAGE_KEY, '{}');
+                return JSON.parse(raw || '{}');
+            }
+        } catch (error) {
+            console.warn('YouTube Subtitle Fix: failed to load saved settings.', error);
+        }
+
+        return {};
+    }
+
+    function saveSettings(partialSettings) {
+        if (typeof GM_setValue !== 'function') return false;
+
+        const nextSettings = {
+            ...SETTINGS,
+            ...partialSettings
+        };
+
+        GM_setValue(SETTINGS_STORAGE_KEY, JSON.stringify({
+            subtitleSizeMode: nextSettings.subtitleSizeMode,
+            preferYouTubeSizeInSmallPlayers: nextSettings.preferYouTubeSizeInSmallPlayers,
+            customFontSizeNormal: nextSettings.customFontSizeNormal,
+            customFontSizeFullscreen: nextSettings.customFontSizeFullscreen
+        }));
+
+        return true;
+    }
+
+    function promptNumber(message, currentValue) {
+        const input = window.prompt(message, String(currentValue));
+        if (input === null) return null;
+
+        const value = Number(input.trim());
+        if (!Number.isFinite(value) || value <= 0) {
+            window.alert('Please enter a valid positive number.');
+            return null;
+        }
+
+        return value;
+    }
+
+    function applySavedMode(mode, extraSettings = {}) {
+        const saved = saveSettings({
+            subtitleSizeMode: mode,
+            ...extraSettings
+        });
+
+        if (!saved) {
+            window.alert('This userscript manager does not support saved menu settings here.');
+            return;
+        }
+
+        window.alert('Subtitle size setting saved. Reloading the page to apply it.');
+        window.location.reload();
+    }
+
+    function registerMenuCommands() {
+        if (typeof GM_registerMenuCommand !== 'function') return;
+
+        GM_registerMenuCommand(`Subtitle size mode: ${SETTINGS.subtitleSizeMode}`, () => {
+            window.alert('Available modes: default, script, custom.');
+        });
+
+        GM_registerMenuCommand('Use YouTube default subtitle size', () => {
+            applySavedMode('default');
+        });
+
+        GM_registerMenuCommand('Use script subtitle size', () => {
+            applySavedMode('script');
+        });
+
+        GM_registerMenuCommand('Set custom subtitle size', () => {
+            const normalSize = promptNumber('Custom subtitle size for normal mode (px):', SETTINGS.customFontSizeNormal);
+            if (normalSize === null) return;
+
+            const fullscreenSize = promptNumber('Custom subtitle size for fullscreen mode (px):', SETTINGS.customFontSizeFullscreen);
+            if (fullscreenSize === null) return;
+
+            applySavedMode('custom', {
+                customFontSizeNormal: normalSize,
+                customFontSizeFullscreen: fullscreenSize
+            });
+        });
+
+        GM_registerMenuCommand(
+            `${SETTINGS.preferYouTubeSizeInSmallPlayers ? 'Disable' : 'Enable'} YouTube default size in previews and mini players`,
+            () => {
+                applySavedMode(SETTINGS.subtitleSizeMode, {
+                    preferYouTubeSizeInSmallPlayers: !SETTINGS.preferYouTubeSizeInSmallPlayers
+                });
+            }
+        );
+
+        GM_registerMenuCommand('Reset saved subtitle size settings', () => {
+            applySavedMode(DEFAULT_SETTINGS.subtitleSizeMode, {
+                preferYouTubeSizeInSmallPlayers: DEFAULT_SETTINGS.preferYouTubeSizeInSmallPlayers,
+                customFontSizeNormal: DEFAULT_SETTINGS.customFontSizeNormal,
+                customFontSizeFullscreen: DEFAULT_SETTINGS.customFontSizeFullscreen
+            });
+        });
+    }
+
+    function isSmallPlayerContext(player) {
+        if (!player || isFullscreen(player)) return false;
+
+        const rect = player.getBoundingClientRect();
+        const width = rect.width || player.clientWidth || 0;
+        const height = rect.height || player.clientHeight || 0;
+
+        if (width > 0 && width <= 520) return true;
+        if (height > 0 && height <= 320) return true;
+        if (!location.pathname.startsWith('/watch')) return true;
+        if (player.closest('ytd-miniplayer')) return true;
+        if (player.closest('ytd-rich-grid-media')) return true;
+        if (player.closest('ytd-compact-video-renderer')) return true;
+        if (player.closest('ytd-video-preview')) return true;
+
+        return false;
+    }
+
+    function getConfiguredFontSize(full, player) {
+        if (SETTINGS.preferYouTubeSizeInSmallPlayers && isSmallPlayerContext(player)) return null;
+        if (SETTINGS.subtitleSizeMode === 'default') return null;
+        if (SETTINGS.subtitleSizeMode === 'custom') {
+            return full ? SETTINGS.customFontSizeFullscreen : SETTINGS.customFontSizeNormal;
+        }
+
+        return full ? SETTINGS.fontSizeFullscreen : SETTINGS.fontSizeNormal;
+    }
 
     function injectStyles() {
         if (stylesInjected && document.getElementById(STYLE_ID)) return;
@@ -133,22 +289,6 @@
                 color: ${SETTINGS.textColor} !important;
                 text-shadow: ${SETTINGS.textShadow} !important;
                 line-height: ${SETTINGS.lineHeight} !important;
-            }
-
-            .html5-video-player .captions-text,
-            .html5-video-player .caption-visual-line,
-            .html5-video-player .ytp-caption-segment,
-            .html5-video-player .captions-text span,
-            .html5-video-player .caption-window span {
-                font-size: ${SETTINGS.fontSizeNormal}px !important;
-            }
-
-            .html5-video-player.ytp-fullscreen .captions-text,
-            .html5-video-player.ytp-fullscreen .caption-visual-line,
-            .html5-video-player.ytp-fullscreen .ytp-caption-segment,
-            .html5-video-player.ytp-fullscreen .captions-text span,
-            .html5-video-player.ytp-fullscreen .caption-window span {
-                font-size: ${SETTINGS.fontSizeFullscreen}px !important;
             }
 
             .html5-video-player .ytp-caption-window-container {
@@ -449,7 +589,7 @@
     }
 
     function applyTextStyles(caption, full) {
-        const fontSize = full ? SETTINGS.fontSizeFullscreen : SETTINGS.fontSizeNormal;
+        const fontSize = getConfiguredFontSize(full, getPlayer());
         const textNode = getCaptionsText(caption);
         const preserveOriginalText = SETTINGS.preserveAutoGeneratedCaptions && isAutoGeneratedCaptionActive();
 
@@ -472,7 +612,11 @@
             textNode.style.whiteSpace = 'pre-wrap';
             textNode.style.wordBreak = 'normal';
             textNode.style.overflowWrap = 'break-word';
-            textNode.style.fontSize = `${fontSize}px`;
+            if (fontSize === null) {
+                textNode.style.removeProperty('font-size');
+            } else {
+                textNode.style.fontSize = `${fontSize}px`;
+            }
             textNode.style.lineHeight = String(SETTINGS.lineHeight);
             textNode.style.color = SETTINGS.textColor;
             textNode.style.textShadow = SETTINGS.textShadow;
@@ -486,7 +630,11 @@
 
         const all = caption.querySelectorAll('.ytp-caption-segment, .caption-visual-line, .captions-text span, .caption-window span');
         for (const el of all) {
-            el.style.fontSize = `${fontSize}px`;
+            if (fontSize === null) {
+                el.style.removeProperty('font-size');
+            } else {
+                el.style.fontSize = `${fontSize}px`;
+            }
             el.style.lineHeight = String(SETTINGS.lineHeight);
             el.style.color = SETTINGS.textColor;
             el.style.textShadow = SETTINGS.textShadow;
@@ -586,6 +734,7 @@
         return true;
     }
 
+    registerMenuCommands();
     injectStyles();
 
     const wait = setInterval(() => {

@@ -11,6 +11,8 @@ Improves how YouTube subtitles look and behave with smarter line wrapping, bette
 
 - Changes subtitle text color
 - Changes subtitle size in normal mode and fullscreen mode
+- Lets Tampermonkey users save subtitle size preferences through the userscript menu
+- Can automatically keep YouTube's default subtitle size in previews, mini player, and other small player contexts
 - Adjusts subtitle background color and opacity
 - Supports one shared background box or per-line background boxes
 - Keeps subtitles centered
@@ -30,6 +32,9 @@ Improves how YouTube subtitles look and behave with smarter line wrapping, bette
 - `backgroundOpacity` - background transparency from `0` to `1`
 - `fontSizeNormal` - subtitle size in normal mode
 - `fontSizeFullscreen` - subtitle size in fullscreen mode
+- `subtitleSizeMode` - `default`, `script`, or `custom` subtitle size mode
+- `preferYouTubeSizeInSmallPlayers` - keeps previews and mini players on YouTube's default subtitle size
+- `customFontSizeNormal` / `customFontSizeFullscreen` - saved subtitle sizes for custom mode
 - `lineHeight` - spacing between subtitle lines
 - `maxWidthPercent` - maximum subtitle width relative to the video width
 - `enableAutoLineBreaks` - turns smart wrapping on or off
@@ -61,6 +66,8 @@ perLineBackground: true,
 2. Create a new script.
 3. Replace the template with the contents of `tampermonkey.user.js`.
 4. Save and open any YouTube video.
+5. Optional: use the Tampermonkey menu to switch between YouTube default subtitle size, the script's subtitle size, or your own saved custom size.
+6. Optional: keep YouTube's default subtitle size in previews and mini player while still using your preferred size in normal and fullscreen playback.
 
 ### Enhancer for YouTube
 
@@ -76,10 +83,23 @@ perLineBackground: true,
 - Final behavior can still depend on how YouTube renders captions internally.
 - Best results usually come from adjusting `maxWidthPercent`, `maxCharsPerLine`, and `lineHeight` together.
 
+## Changelog
+
+### 1.2.0
+
+- Added saved Tampermonkey subtitle size settings.
+- Added subtitle size modes: YouTube default, script size, and custom size.
+- Added automatic YouTube default sizing for previews, mini player, and small player contexts.
+- Updated README with the new size settings.
+
+### 1.0.4
+
+- Improved subtitle centering so captions are centered immediately when rendered.
+
+### 1.0.2
+
+- Preserved auto-generated captions to avoid flickering and layout glitches.
+
 ## Greasy Fork
 
 [Greasy Fork script page](https://greasyfork.org/en/scripts/575046-youtube-subtitle-fix-smart-line-wrapping-better-readability)
-
-## Sponsor
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N4N0XO52O)
