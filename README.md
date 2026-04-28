@@ -86,26 +86,33 @@ perLineBackground: true,
 
 ## Changelog
 
-### 1.2.1
+### 1.2.4
 
-- Added a YouTube header button: **YT Sub Fix**
-- Added an in-page settings panel
-- Added Ko-fi support button inside the panel
-- Added color pickers for subtitle text and background color
-- Added background opacity control
-- Added subtitle size controls:
-  - YouTube default size
-  - Script size
-  - Custom size
-  - Normal / fullscreen size adjustment
-- Added subtitle position controls:
-  - Normal up/down
-  - Fullscreen up/down
-  - Reset position
-- Added toggle for smart line wrapping
+- Added YouTube header button: YT Sub Fix
+- Added in-page settings panel
+- Added Ko-fi support button
+- Added text color picker
+- Added background color picker
+- Added background opacity slider
+- Added subtitle size mode controls
+- Added normal and fullscreen custom size controls
+- Added subtitle position controls
+- Added smart line wrapping controls
+- Added visible line length value on wrapping buttons
+- Removed Tampermonkey dropdown menu commands so only the script name appears
 - Settings are saved automatically
-- Keeps YouTube auto-generated captions stable
-- Keeps YouTube default subtitle size in previews / mini player when enabled
+ 
+
+### Live preview tip for line wrapping
+
+```
+The **Line shorter** and **Line longer** settings are saved immediately, but YouTube does not always refresh the visible subtitle layout in normal view right away.
+
+If the subtitle line wrapping does not visibly update while the video is playing, press **F** to switch between normal and fullscreen mode.
+
+This usually forces YouTube to redraw the subtitle layer, so the updated line wrapping becomes visible immediately.
+
+```
 
 
 ### 1.2.0
