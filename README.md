@@ -83,7 +83,30 @@ perLineBackground: true,
 - Final behavior can still depend on how YouTube renders captions internally.
 - Best results usually come from adjusting `maxWidthPercent`, `maxCharsPerLine`, and `lineHeight` together.
 
+
 ## Changelog
+
+### 1.2.1
+
+- Added a YouTube header button: **YT Sub Fix**
+- Added an in-page settings panel
+- Added Ko-fi support button inside the panel
+- Added color pickers for subtitle text and background color
+- Added background opacity control
+- Added subtitle size controls:
+  - YouTube default size
+  - Script size
+  - Custom size
+  - Normal / fullscreen size adjustment
+- Added subtitle position controls:
+  - Normal up/down
+  - Fullscreen up/down
+  - Reset position
+- Added toggle for smart line wrapping
+- Settings are saved automatically
+- Keeps YouTube auto-generated captions stable
+- Keeps YouTube default subtitle size in previews / mini player when enabled
+
 
 ### 1.2.0
 
