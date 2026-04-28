@@ -105,14 +105,10 @@ perLineBackground: true,
 
 ### Live preview tip for line wrapping
 
-```
 The **Line shorter** and **Line longer** settings are saved immediately, but YouTube does not always refresh the visible subtitle layout in normal view right away.
-
 If the subtitle line wrapping does not visibly update while the video is playing, press **F** to switch between normal and fullscreen mode.
-
 This usually forces YouTube to redraw the subtitle layer, so the updated line wrapping becomes visible immediately.
 
-```
 
 
 ### 1.2.0
