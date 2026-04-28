@@ -127,6 +127,11 @@ This usually forces YouTube to redraw the subtitle layer, so the updated line wr
 
 - Preserved auto-generated captions to avoid flickering and layout glitches.
 
+## Screenshots
+
+![YouTube Subtitle Fix settings panel](screenshot1.jpg)
+
+
 ## Greasy Fork
 
 [Greasy Fork script page](https://greasyfork.org/en/scripts/575046-youtube-subtitle-fix-smart-line-wrapping-better-readability)
