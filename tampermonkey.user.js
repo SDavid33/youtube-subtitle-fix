@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         YouTube Subtitle Fix
 // @namespace    https://github.com/SDavid33
-// @version      1.2.1
+// @version      1.2.4
 // @description  Improves YouTube subtitles with smarter line wrapping, readable styling, customizable settings panel, and YouTube header icon.
 // @author       David33
 // @match        https://www.youtube.com/*
 // @grant        GM_getValue
 // @grant        GM_setValue
-// @grant        GM_registerMenuCommand
 // @grant        GM_notification
 // @run-at       document-idle
 // ==/UserScript==
@@ -153,67 +152,6 @@
         }
 
         return value;
-    }
-
-    function applySavedMode(mode, extraSettings = {}) {
-        const saved = saveSettings({
-            subtitleSizeMode: mode,
-            ...extraSettings
-        });
-
-        if (!saved) {
-            window.alert('This userscript manager does not support saved menu settings here.');
-            return;
-        }
-
-        window.alert('Subtitle size setting saved. Reloading the page to apply it.');
-        window.location.reload();
-    }
-
-    function registerMenuCommands() {
-        if (typeof GM_registerMenuCommand !== 'function') return;
-
-        GM_registerMenuCommand(`Subtitle size mode: ${SETTINGS.subtitleSizeMode}`, () => {
-            window.alert('Available modes: default, script, custom.');
-        });
-
-        GM_registerMenuCommand('Use YouTube default subtitle size', () => {
-            applySavedMode('default');
-        });
-
-        GM_registerMenuCommand('Use script subtitle size', () => {
-            applySavedMode('script');
-        });
-
-        GM_registerMenuCommand('Set custom subtitle size', () => {
-            const normalSize = promptNumber('Custom subtitle size for normal mode (px):', SETTINGS.customFontSizeNormal);
-            if (normalSize === null) return;
-
-            const fullscreenSize = promptNumber('Custom subtitle size for fullscreen mode (px):', SETTINGS.customFontSizeFullscreen);
-            if (fullscreenSize === null) return;
-
-            applySavedMode('custom', {
-                customFontSizeNormal: normalSize,
-                customFontSizeFullscreen: fullscreenSize
-            });
-        });
-
-        GM_registerMenuCommand(
-            `${SETTINGS.preferYouTubeSizeInSmallPlayers ? 'Disable' : 'Enable'} YouTube default size in previews and mini players`,
-            () => {
-                applySavedMode(SETTINGS.subtitleSizeMode, {
-                    preferYouTubeSizeInSmallPlayers: !SETTINGS.preferYouTubeSizeInSmallPlayers
-                });
-            }
-        );
-
-        GM_registerMenuCommand('Reset saved subtitle size settings', () => {
-            applySavedMode(DEFAULT_SETTINGS.subtitleSizeMode, {
-                preferYouTubeSizeInSmallPlayers: DEFAULT_SETTINGS.preferYouTubeSizeInSmallPlayers,
-                customFontSizeNormal: DEFAULT_SETTINGS.customFontSizeNormal,
-                customFontSizeFullscreen: DEFAULT_SETTINGS.customFontSizeFullscreen
-            });
-        });
     }
 
     function notify(message) {
@@ -612,6 +550,8 @@
 
         const wrapOn = makeButton('Wrap ON', 'wrap-on', SETTINGS.enableAutoLineBreaks ? 'active' : '');
         const wrapOff = makeButton('Wrap OFF', 'wrap-off', !SETTINGS.enableAutoLineBreaks ? 'active' : '');
+        const lineShorter = makeButton(`Line shorter (${SETTINGS.maxCharsPerLine})`, 'line-shorter');
+        const lineLonger = makeButton(`Line longer (${SETTINGS.maxCharsPerLine})`, 'line-longer');
 
         const normalUp = makeButton('Normal up', 'position-normal-up');
         const normalDown = makeButton('Normal down', 'position-normal-down');
@@ -645,7 +585,12 @@
             bgColor,
             opacitySlider
         ]));
-        panel.appendChild(makeSection('Smart line wrapping', [wrapOn, wrapOff]));
+        panel.appendChild(makeSection('Smart line wrapping', [
+            wrapOn,
+            wrapOff,
+            lineShorter,
+            lineLonger
+        ]));
         panel.appendChild(makeSection('Subtitle position', [
             normalUp,
             normalDown,
@@ -677,6 +622,7 @@
             `Text: ${SETTINGS.textColor} | ` +
             `BG: ${rgbStringToHex(SETTINGS.backgroundColor)} / ${Math.round(SETTINGS.backgroundOpacity * 100)}% | ` +
             `Wrap: ${SETTINGS.enableAutoLineBreaks ? 'ON' : 'OFF'} | ` +
+            `Line: ${SETTINGS.maxCharsPerLine} chars | ` +
             `Position: normal ${SETTINGS.positionNormal}px / fullscreen ${SETTINGS.positionFullscreen}px`;
     }
 
@@ -815,6 +761,22 @@
 
         if (action === 'wrap-off') {
             saveSettings({ enableAutoLineBreaks: false });
+            refreshAfterSettingChange(true);
+            return;
+        }
+
+        if (action === 'line-shorter') {
+            saveSettings({
+                maxCharsPerLine: clampNumber(SETTINGS.maxCharsPerLine - 2, 24, 70, DEFAULT_SETTINGS.maxCharsPerLine)
+            });
+            refreshAfterSettingChange(true);
+            return;
+        }
+
+        if (action === 'line-longer') {
+            saveSettings({
+                maxCharsPerLine: clampNumber(SETTINGS.maxCharsPerLine + 2, 24, 70, DEFAULT_SETTINGS.maxCharsPerLine)
+            });
             refreshAfterSettingChange(true);
             return;
         }
@@ -1465,7 +1427,6 @@
         }, 1500);
     }
 
-    registerMenuCommands();
     injectUiStyles();
     ensureTopButton();
     injectStyles();
