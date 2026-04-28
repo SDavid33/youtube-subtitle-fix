@@ -90,7 +90,6 @@ perLineBackground: true,
 
 - Added YouTube header button: YT Sub Fix
 - Added in-page settings panel
-- Added Ko-fi support button
 - Added text color picker
 - Added background color picker
 - Added background opacity slider
