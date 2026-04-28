@@ -103,3 +103,7 @@ perLineBackground: true,
 ## Greasy Fork
 
 [Greasy Fork script page](https://greasyfork.org/en/scripts/575046-youtube-subtitle-fix-smart-line-wrapping-better-readability)
+
+## Sponsor
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N4N0XO52O)
