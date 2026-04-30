@@ -61,6 +61,7 @@
     };
 
     const STYLE_ID = 'yt-subtitle-full-control-style';
+    const LINE_BACKGROUND_CLASS = 'yt-sub-fix-line-background';
 
     const IDS = {
         topButton: 'yt-sub-fix-top-button',
@@ -221,7 +222,7 @@
                 top: 62px !important;
                 bottom: auto !important;
                 z-index: 2147483647 !important;
-                width: 420px !important;
+                width: 455px !important;
                 max-height: calc(100vh - 82px) !important;
                 overflow-y: auto !important;
                 padding: 14px !important;
@@ -308,6 +309,7 @@
                 display: inline-flex !important;
                 align-items: center !important;
                 gap: 7px !important;
+                flex: 0 0 auto !important;
                 padding: 6px 8px !important;
                 border-radius: 999px !important;
                 background: rgba(255,255,255,.13) !important;
@@ -329,16 +331,22 @@
                 display: flex !important;
                 align-items: center !important;
                 gap: 8px !important;
-                flex: 1 1 100% !important;
-                min-width: 260px !important;
+                flex: 0 1 190px !important;
+                min-width: 190px !important;
                 padding: 8px 10px !important;
                 border-radius: 12px !important;
                 background: rgba(255,255,255,.08) !important;
                 box-sizing: border-box !important;
             }
 
+            #${IDS.panel} .yt-sf-range-wrap span:first-child {
+                white-space: nowrap !important;
+            }
+
             #${IDS.panel} input[type="range"] {
                 flex: 1 !important;
+                min-width: 0 !important;
+                width: 80px !important;
                 accent-color: ${THEME.accent} !important;
             }
 
@@ -558,23 +566,25 @@
         const modeCustom = makeButton('Custom size', 'mode-custom', SETTINGS.subtitleSizeMode === 'custom' ? 'active' : '');
 
         const setCustomSizes = makeButton('Set custom sizes', 'set-custom-sizes');
-        const normalMinus = makeButton('Normal -', 'normal-minus');
-        const normalPlus = makeButton('Normal +', 'normal-plus');
-        const fullMinus = makeButton('Fullscreen -', 'full-minus');
-        const fullPlus = makeButton('Fullscreen +', 'full-plus');
+        const normalMinus = makeButton(`Normal - (${SETTINGS.customFontSizeNormal}px)`, 'normal-minus');
+        const normalPlus = makeButton(`Normal + (${SETTINGS.customFontSizeNormal}px)`, 'normal-plus');
+        const fullMinus = makeButton(`Fullscreen - (${SETTINGS.customFontSizeFullscreen}px)`, 'full-minus');
+        const fullPlus = makeButton(`Fullscreen + (${SETTINGS.customFontSizeFullscreen}px)`, 'full-plus');
         const textColor = makeColorPicker('Text', 'textColor', SETTINGS.textColor);
         const bgColor = makeColorPicker('BG', 'backgroundColor', SETTINGS.backgroundColor);
         const opacitySlider = makeOpacitySlider(SETTINGS.backgroundOpacity);
+        const bgModeLine = makeButton('Line BG', 'bg-mode-line', SETTINGS.perLineBackground ? 'active' : '');
+        const bgModeBox = makeButton('Box BG', 'bg-mode-box', !SETTINGS.perLineBackground ? 'active' : '');
 
         const wrapOn = makeButton('Wrap ON', 'wrap-on', SETTINGS.enableAutoLineBreaks ? 'active' : '');
         const wrapOff = makeButton('Wrap OFF', 'wrap-off', !SETTINGS.enableAutoLineBreaks ? 'active' : '');
         const lineShorter = makeButton(`Line shorter (${SETTINGS.maxCharsPerLine})`, 'line-shorter');
         const lineLonger = makeButton(`Line longer (${SETTINGS.maxCharsPerLine})`, 'line-longer');
 
-        const normalUp = makeButton('Normal up', 'position-normal-up');
-        const normalDown = makeButton('Normal down', 'position-normal-down');
-        const fullUp = makeButton('Fullscreen up', 'position-full-up');
-        const fullDown = makeButton('Fullscreen down', 'position-full-down');
+        const normalUp = makeButton(`Normal up (${SETTINGS.positionNormal}px)`, 'position-normal-up');
+        const normalDown = makeButton(`Normal down (${SETTINGS.positionNormal}px)`, 'position-normal-down');
+        const fullUp = makeButton(`Fullscreen up (${SETTINGS.positionFullscreen}px)`, 'position-full-up');
+        const fullDown = makeButton(`Fullscreen down (${SETTINGS.positionFullscreen}px)`, 'position-full-down');
         const resetPosition = makeButton('Reset position', 'position-reset');
 
         const reset = makeButton('Reset settings', 'reset-settings', 'danger');
@@ -597,10 +607,12 @@
             setCustomSizes,
             normalMinus,
             normalPlus,
-            fullMinus,
             fullPlus,
+            fullMinus,
             textColor,
             bgColor,
+            bgModeLine,
+            bgModeBox,
             opacitySlider
         ]));
         panel.appendChild(makeSection('Smart line wrapping', [
@@ -639,6 +651,7 @@
             `Fullscreen: ${fullscreenSize} | ` +
             `Text: ${SETTINGS.textColor} | ` +
             `BG: ${rgbStringToHex(SETTINGS.backgroundColor)} / ${Math.round(SETTINGS.backgroundOpacity * 100)}% | ` +
+            `BG mode: ${SETTINGS.perLineBackground ? 'line' : 'box'} | ` +
             `Wrap: ${SETTINGS.enableAutoLineBreaks ? 'ON' : 'OFF'} | ` +
             `Line: ${SETTINGS.maxCharsPerLine} chars | ` +
             `Position: normal ${SETTINGS.positionNormal}px / fullscreen ${SETTINGS.positionFullscreen}px`;
@@ -696,6 +709,8 @@
 
         if (action === 'enabled-off') {
             saveSettings({ enabled: false });
+            removeSubtitleStyles();
+            clearCurrentCaptionInlineStyles();
             refreshAfterSettingChange(true);
             return;
         }
@@ -738,7 +753,7 @@
         if (action === 'normal-minus') {
             saveSettings({
                 subtitleSizeMode: 'custom',
-                customFontSizeNormal: Math.max(10, SETTINGS.customFontSizeNormal - 2)
+                customFontSizeNormal: Math.max(10, SETTINGS.customFontSizeNormal - 1)
             });
             refreshAfterSettingChange(true);
             return;
@@ -747,7 +762,7 @@
         if (action === 'normal-plus') {
             saveSettings({
                 subtitleSizeMode: 'custom',
-                customFontSizeNormal: Math.min(120, SETTINGS.customFontSizeNormal + 2)
+                customFontSizeNormal: Math.min(120, SETTINGS.customFontSizeNormal + 1)
             });
             refreshAfterSettingChange(true);
             return;
@@ -756,7 +771,7 @@
         if (action === 'full-minus') {
             saveSettings({
                 subtitleSizeMode: 'custom',
-                customFontSizeFullscreen: Math.max(10, SETTINGS.customFontSizeFullscreen - 2)
+                customFontSizeFullscreen: Math.max(10, SETTINGS.customFontSizeFullscreen - 1)
             });
             refreshAfterSettingChange(true);
             return;
@@ -765,8 +780,20 @@
         if (action === 'full-plus') {
             saveSettings({
                 subtitleSizeMode: 'custom',
-                customFontSizeFullscreen: Math.min(160, SETTINGS.customFontSizeFullscreen + 2)
+                customFontSizeFullscreen: Math.min(160, SETTINGS.customFontSizeFullscreen + 1)
             });
+            refreshAfterSettingChange(true);
+            return;
+        }
+
+        if (action === 'bg-mode-line') {
+            saveSettings({ perLineBackground: true });
+            refreshAfterSettingChange(true);
+            return;
+        }
+
+        if (action === 'bg-mode-box') {
+            saveSettings({ perLineBackground: false });
             refreshAfterSettingChange(true);
             return;
         }
@@ -785,7 +812,7 @@
 
         if (action === 'line-shorter') {
             saveSettings({
-                maxCharsPerLine: clampNumber(SETTINGS.maxCharsPerLine - 2, 24, 70, DEFAULT_SETTINGS.maxCharsPerLine)
+                maxCharsPerLine: clampNumber(SETTINGS.maxCharsPerLine - 1, 24, 70, DEFAULT_SETTINGS.maxCharsPerLine)
             });
             refreshAfterSettingChange(true);
             return;
@@ -793,7 +820,7 @@
 
         if (action === 'line-longer') {
             saveSettings({
-                maxCharsPerLine: clampNumber(SETTINGS.maxCharsPerLine + 2, 24, 70, DEFAULT_SETTINGS.maxCharsPerLine)
+                maxCharsPerLine: clampNumber(SETTINGS.maxCharsPerLine + 1, 24, 70, DEFAULT_SETTINGS.maxCharsPerLine)
             });
             refreshAfterSettingChange(true);
             return;
@@ -801,33 +828,33 @@
 
         if (action === 'position-normal-up') {
             saveSettings({
-                positionNormal: clampNumber(SETTINGS.positionNormal + 10, -300, 300, 0)
+                positionNormal: clampNumber(SETTINGS.positionNormal + 1, -300, 300, 0)
             });
-            refreshAfterSettingChange(false);
+            refreshAfterSettingChange(true);
             return;
         }
 
         if (action === 'position-normal-down') {
             saveSettings({
-                positionNormal: clampNumber(SETTINGS.positionNormal - 10, -300, 300, 0)
+                positionNormal: clampNumber(SETTINGS.positionNormal - 1, -300, 300, 0)
             });
-            refreshAfterSettingChange(false);
+            refreshAfterSettingChange(true);
             return;
         }
 
         if (action === 'position-full-up') {
             saveSettings({
-                positionFullscreen: clampNumber(SETTINGS.positionFullscreen + 10, -300, 300, 0)
+                positionFullscreen: clampNumber(SETTINGS.positionFullscreen + 1, -300, 300, 0)
             });
-            refreshAfterSettingChange(false);
+            refreshAfterSettingChange(true);
             return;
         }
 
         if (action === 'position-full-down') {
             saveSettings({
-                positionFullscreen: clampNumber(SETTINGS.positionFullscreen - 10, -300, 300, 0)
+                positionFullscreen: clampNumber(SETTINGS.positionFullscreen - 1, -300, 300, 0)
             });
-            refreshAfterSettingChange(false);
+            refreshAfterSettingChange(true);
             return;
         }
 
@@ -836,7 +863,7 @@
                 positionNormal: 0,
                 positionFullscreen: 0
             });
-            refreshAfterSettingChange(false);
+            refreshAfterSettingChange(true);
             return;
         }
 
@@ -944,6 +971,11 @@
     }
 
     function injectStyles() {
+        if (!SETTINGS.enabled) {
+            removeSubtitleStyles();
+            return;
+        }
+
         if (stylesInjected && document.getElementById(STYLE_ID)) return;
 
         let style = document.getElementById(STYLE_ID);
@@ -986,9 +1018,9 @@
             }
 
             .html5-video-player .caption-window {
-                background: rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity}) !important;
-                border-radius: ${SETTINGS.borderRadius}px !important;
-                padding: ${SETTINGS.paddingY}em ${SETTINGS.paddingX}em !important;
+                background: ${SETTINGS.perLineBackground ? 'transparent' : `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})`} !important;
+                border-radius: ${SETTINGS.perLineBackground ? '0' : `${SETTINGS.borderRadius}px`} !important;
+                padding: ${SETTINGS.perLineBackground ? '0' : `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em`} !important;
                 text-align: center !important;
                 max-width: ${SETTINGS.maxWidthPercent}% !important;
                 left: auto !important;
@@ -1021,6 +1053,9 @@
                 white-space: pre-wrap !important;
                 word-break: normal !important;
                 overflow-wrap: break-word !important;
+                background: transparent !important;
+                padding: 0 !important;
+                border-radius: 0 !important;
             }
 
             .html5-video-player .ytp-caption-segment,
@@ -1045,6 +1080,21 @@
     function removeSubtitleStyles() {
         document.getElementById(STYLE_ID)?.remove();
         stylesInjected = false;
+    }
+
+    function clearCurrentCaptionInlineStyles() {
+        if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+
+        const captionElements = document.querySelectorAll(
+            '.ytp-caption-window-container, .caption-window, .captions-text, .caption-visual-line, .ytp-caption-segment, .captions-text span, .caption-window span'
+        );
+
+        for (const el of captionElements) {
+            el.removeAttribute('style');
+        }
     }
 
     function getPlayer() {
@@ -1243,6 +1293,33 @@
         return buildWrappedText(textNode.innerText || textNode.textContent || '');
     }
 
+    function renderPerLineBackgroundText(textNode, text) {
+        const lines = String(text || '')
+            .split('\n')
+            .map(line => line.trim())
+            .filter(Boolean);
+
+        const renderKey = lines.join('\n');
+        if (!renderKey) return;
+
+        if (textNode.dataset.ytSubFixRenderedText === renderKey && textNode.querySelector(`.${LINE_BACKGROUND_CLASS}`)) {
+            return;
+        }
+
+        textNode.replaceChildren();
+
+        lines.forEach((line, index) => {
+            if (index > 0) textNode.appendChild(document.createElement('br'));
+
+            const lineEl = document.createElement('span');
+            lineEl.className = LINE_BACKGROUND_CLASS;
+            lineEl.textContent = line;
+            textNode.appendChild(lineEl);
+        });
+
+        textNode.dataset.ytSubFixRenderedText = renderKey;
+    }
+
     function applyContainerStyles(container) {
         container.style.position = 'absolute';
         container.style.left = '0';
@@ -1279,9 +1356,9 @@
         caption.style.display = 'table';
         caption.style.transform = `translateY(-${raisePx}px)`;
         caption.style.translate = 'none';
-        caption.style.background = SETTINGS.perLineBackground ? 'transparent' : `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})`;
-        caption.style.padding = SETTINGS.perLineBackground ? '0' : `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em`;
-        caption.style.borderRadius = SETTINGS.perLineBackground ? '0' : `${SETTINGS.borderRadius}px`;
+        caption.style.setProperty('background', SETTINGS.perLineBackground ? 'transparent' : `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})`, 'important');
+        caption.style.setProperty('padding', SETTINGS.perLineBackground ? '0' : `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em`, 'important');
+        caption.style.setProperty('border-radius', SETTINGS.perLineBackground ? '0' : `${SETTINGS.borderRadius}px`, 'important');
     }
 
     function applyTextStyles(caption, full) {
@@ -1292,12 +1369,18 @@
         if (textNode) {
             if (!preserveOriginalText) {
                 const displayText = getDisplayText(caption);
-                if (displayText && textNode.textContent !== displayText) {
+                if (displayText && SETTINGS.perLineBackground) {
+                    renderPerLineBackgroundText(textNode, displayText);
+                } else if (displayText && textNode.textContent !== displayText) {
                     textNode.textContent = displayText;
+                    delete textNode.dataset.ytSubFixRenderedText;
                 }
+            } else if (textNode.dataset.ytSubFixRenderedText) {
+                textNode.textContent = textNode.innerText || textNode.textContent || '';
+                delete textNode.dataset.ytSubFixRenderedText;
             }
 
-            textNode.style.display = SETTINGS.perLineBackground ? 'inline' : 'block';
+            textNode.style.display = 'block';
             textNode.style.textAlign = 'center';
             textNode.style.setProperty('left', 'auto', 'important');
             textNode.style.setProperty('right', 'auto', 'important');
@@ -1316,16 +1399,16 @@
             textNode.style.lineHeight = String(SETTINGS.lineHeight);
             textNode.style.color = SETTINGS.textColor;
             textNode.style.textShadow = SETTINGS.textShadow;
-            textNode.style.background = SETTINGS.perLineBackground ? `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})` : 'transparent';
-            textNode.style.padding = SETTINGS.perLineBackground ? `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em` : '0';
-            textNode.style.borderRadius = SETTINGS.perLineBackground ? `${SETTINGS.borderRadius}px` : '0';
-            textNode.style.margin = SETTINGS.perLineBackground ? '0' : '0 auto';
-            textNode.style.boxDecorationBreak = SETTINGS.perLineBackground ? 'clone' : 'slice';
-            textNode.style.setProperty('-webkit-box-decoration-break', SETTINGS.perLineBackground ? 'clone' : 'slice');
+            textNode.style.setProperty('background', 'transparent', 'important');
+            textNode.style.setProperty('padding', '0', 'important');
+            textNode.style.setProperty('border-radius', '0', 'important');
+            textNode.style.margin = '0 auto';
         }
 
         const all = caption.querySelectorAll('.ytp-caption-segment, .caption-visual-line, .captions-text span, .caption-window span');
         for (const el of all) {
+            if (el === textNode) continue;
+
             if (fontSize === null) {
                 el.style.removeProperty('font-size');
             } else {
@@ -1335,6 +1418,16 @@
             el.style.color = SETTINGS.textColor;
             el.style.textShadow = SETTINGS.textShadow;
             el.style.textAlign = 'center';
+
+            if (el.classList.contains(LINE_BACKGROUND_CLASS)) {
+                el.style.setProperty('display', 'inline-block', 'important');
+                el.style.setProperty('background', `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})`, 'important');
+                el.style.setProperty('padding', `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em`, 'important');
+                el.style.setProperty('border-radius', '0', 'important');
+                el.style.setProperty('margin', '0 auto', 'important');
+                continue;
+            }
+
             el.style.setProperty('left', 'auto', 'important');
             el.style.setProperty('right', 'auto', 'important');
             el.style.setProperty('top', 'auto', 'important');
