@@ -95,6 +95,17 @@ perLineBackground: true,
 - Improved subtitle positioning so captions are placed correctly earlier, reducing the bottom-position flicker before the script-applied offset appears.
 
 
+## Additional fixes and improvements
+
+- Added a background mode switch in the settings panel.
+- `Line BG` uses a separate black background behind each subtitle line.
+- `Box BG` uses one shared black background box behind the whole subtitle.
+- Improved per-line background rendering so multi-line subtitles look closer to YouTube's original style.
+- Removed rounded corners from per-line subtitle backgrounds to avoid small gaps between stacked lines.
+- Improved the settings panel layout so the background color, opacity, and background mode controls are easier to use.
+- Fixed the ON/OFF switch so turning the script off restores YouTube's original subtitle styling more cleanly.
+
+
 ### 1.2.4
 
 - Added YouTube header button: YT Sub Fix
