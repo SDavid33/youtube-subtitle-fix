@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Subtitle Fix
 // @namespace    https://github.com/SDavid33
-// @version      1.2.4
+// @version      1.2.5
 // @description  Improves YouTube subtitles with smarter line wrapping, readable styling, customizable settings panel, and YouTube header icon.
 // @author       David33
 // @match        https://www.youtube.com/*
@@ -460,7 +460,23 @@
         return wrap;
     }
 
+    function shouldShowSettingsButton() {
+        if (window.self !== window.top) return false;
+        if (location.pathname.startsWith('/live_chat')) return false;
+        if (location.pathname.startsWith('/embed')) return false;
+        if (location.pathname.startsWith('/watch_chat')) return false;
+
+        return true;
+    }
+
     function ensureTopButton() {
+        if (!shouldShowSettingsButton()) {
+            document.getElementById(IDS.topButton)?.remove();
+            document.getElementById(IDS.fallbackButton)?.remove();
+            document.getElementById(IDS.panel)?.remove();
+            return;
+        }
+
         injectUiStyles();
 
         const mastheadEnd =
@@ -499,6 +515,8 @@
     }
 
     function toggleSettingsPanel() {
+        if (!shouldShowSettingsButton()) return;
+
         const existing = document.getElementById(IDS.panel);
 
         if (existing) {
@@ -936,6 +954,9 @@
             document.head.appendChild(style);
         }
 
+        const normalRaise = SETTINGS.offsetNormal + SETTINGS.positionNormal;
+        const fullscreenRaise = SETTINGS.offsetFullscreen + SETTINGS.positionFullscreen;
+
         style.textContent = `
             .html5-video-player .ytp-caption-window-container,
             .html5-video-player .caption-window,
@@ -977,6 +998,16 @@
                 margin-left: auto !important;
                 margin-right: auto !important;
                 align-self: center !important;
+                position: relative !important;
+                margin: 0 auto !important;
+                width: fit-content !important;
+                display: table !important;
+                transform: translateY(-${normalRaise}px) !important;
+                translate: none !important;
+            }
+
+            .html5-video-player.ytp-fullscreen .caption-window {
+                transform: translateY(-${fullscreenRaise}px) !important;
             }
 
             .html5-video-player .captions-text {
