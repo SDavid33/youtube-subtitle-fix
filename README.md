@@ -148,7 +148,7 @@ This usually forces YouTube to redraw the subtitle layer, so the updated line wr
 
 ## Screenshots
 
-![YouTube Subtitle Fix settings panel](screenshot1.jpg)
+![YouTube Subtitle Fix settings panel](screenshotNEW.jpg)
 
 
 ## Greasy Fork
