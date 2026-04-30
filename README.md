@@ -86,6 +86,15 @@ perLineBackground: true,
 
 ## Changelog
 
+
+## Bug Fixes
+
+### 1.2.5
+
+- Fixed the `YT Sub Fix` button appearing in live chat, embedded YouTube players, and Google preview windows.
+- Improved subtitle positioning so captions are placed correctly earlier, reducing the bottom-position flicker before the script-applied offset appears.
+
+
 ### 1.2.4
 
 - Added YouTube header button: YT Sub Fix
