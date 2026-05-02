@@ -86,8 +86,10 @@ perLineBackground: true,
 
 ## Changelog
 
+### 1.2.6
 
-## Bug Fixes
+- Only small bug fixes
+
 
 ### 1.2.5
 
