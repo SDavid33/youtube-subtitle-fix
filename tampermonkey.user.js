@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Subtitle Fix
 // @namespace    https://github.com/SDavid33
-// @version      1.2.5
+// @version      1.2.6
 // @description  Improves YouTube subtitles with smarter line wrapping, readable styling, customizable settings panel, and YouTube header icon.
 // @author       David33
 // @match        https://www.youtube.com/*
@@ -988,21 +988,48 @@
 
         const normalRaise = SETTINGS.offsetNormal + SETTINGS.positionNormal;
         const fullscreenRaise = SETTINGS.offsetFullscreen + SETTINGS.positionFullscreen;
+        const playerSelector = '#movie_player.html5-video-player';
+        const previewSelector = '.html5-video-player:not(#movie_player)';
 
         style.textContent = `
-            .html5-video-player .ytp-caption-window-container,
-            .html5-video-player .caption-window,
-            .html5-video-player .captions-text,
-            .html5-video-player .caption-visual-line,
-            .html5-video-player .ytp-caption-segment,
-            .html5-video-player .captions-text span,
-            .html5-video-player .caption-window span {
+            ${previewSelector} .caption-window {
+                background: ${SETTINGS.perLineBackground ? 'transparent' : `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})`} !important;
+                border-radius: ${SETTINGS.perLineBackground ? '0' : `${SETTINGS.borderRadius}px`} !important;
+                padding: ${SETTINGS.perLineBackground ? '0' : `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em`} !important;
+            }
+
+            ${previewSelector} .captions-text,
+            ${previewSelector} .caption-visual-line,
+            ${previewSelector} .ytp-caption-segment,
+            ${previewSelector} .captions-text span,
+            ${previewSelector} .caption-window span {
                 color: ${SETTINGS.textColor} !important;
                 text-shadow: ${SETTINGS.textShadow} !important;
                 line-height: ${SETTINGS.lineHeight} !important;
             }
 
-            .html5-video-player .ytp-caption-window-container {
+            ${previewSelector} .ytp-caption-segment,
+            ${previewSelector} .caption-visual-line,
+            ${previewSelector} .captions-text span,
+            ${previewSelector} .caption-window span {
+                background: ${SETTINGS.perLineBackground ? `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})` : 'transparent'} !important;
+                padding: ${SETTINGS.perLineBackground ? `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em` : '0'} !important;
+                border-radius: ${SETTINGS.perLineBackground ? '0' : '0'} !important;
+            }
+
+            ${playerSelector} .ytp-caption-window-container,
+            ${playerSelector} .caption-window,
+            ${playerSelector} .captions-text,
+            ${playerSelector} .caption-visual-line,
+            ${playerSelector} .ytp-caption-segment,
+            ${playerSelector} .captions-text span,
+            ${playerSelector} .caption-window span {
+                color: ${SETTINGS.textColor} !important;
+                text-shadow: ${SETTINGS.textShadow} !important;
+                line-height: ${SETTINGS.lineHeight} !important;
+            }
+
+            ${playerSelector} .ytp-caption-window-container {
                 text-align: center !important;
                 pointer-events: none !important;
                 position: absolute !important;
@@ -1017,7 +1044,7 @@
                 translate: none !important;
             }
 
-            .html5-video-player .caption-window {
+            ${playerSelector} .caption-window {
                 background: ${SETTINGS.perLineBackground ? 'transparent' : `rgba(${SETTINGS.backgroundColor}, ${SETTINGS.backgroundOpacity})`} !important;
                 border-radius: ${SETTINGS.perLineBackground ? '0' : `${SETTINGS.borderRadius}px`} !important;
                 padding: ${SETTINGS.perLineBackground ? '0' : `${SETTINGS.paddingY}em ${SETTINGS.paddingX}em`} !important;
@@ -1038,11 +1065,11 @@
                 translate: none !important;
             }
 
-            .html5-video-player.ytp-fullscreen .caption-window {
+            ${playerSelector}.ytp-fullscreen .caption-window {
                 transform: translateY(-${fullscreenRaise}px) !important;
             }
 
-            .html5-video-player .captions-text {
+            ${playerSelector} .captions-text {
                 text-align: center !important;
                 left: auto !important;
                 right: auto !important;
@@ -1058,10 +1085,10 @@
                 border-radius: 0 !important;
             }
 
-            .html5-video-player .ytp-caption-segment,
-            .html5-video-player .caption-visual-line,
-            .html5-video-player .captions-text span,
-            .html5-video-player .caption-window span {
+            ${playerSelector} .ytp-caption-segment,
+            ${playerSelector} .caption-visual-line,
+            ${playerSelector} .captions-text span,
+            ${playerSelector} .caption-window span {
                 left: auto !important;
                 right: auto !important;
                 top: auto !important;
@@ -1098,7 +1125,7 @@
     }
 
     function getPlayer() {
-        return document.querySelector('.html5-video-player');
+        return document.querySelector('#movie_player.html5-video-player');
     }
 
     function getContainer(player) {
@@ -1106,11 +1133,47 @@
     }
 
     function getCaption(player) {
-        return player?.querySelector('.caption-window') || null;
+        if (!player) return null;
+
+        hideCaptionInfoWindows(player);
+
+        return Array.from(player.querySelectorAll('.caption-window'))
+            .find(caption => !isCaptionInfoWindow(caption)) || null;
     }
 
     function getCaptionsText(caption) {
         return caption?.querySelector('.captions-text') || null;
+    }
+
+    function getCaptionText(caption) {
+        return String(caption?.innerText || caption?.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function isCaptionInfoWindow(caption) {
+        const text = getCaptionText(caption).toLowerCase();
+        if (!text) return false;
+
+        return (
+            text.includes('auto-generated') && (
+                text.includes('click') ||
+                text.includes('settings') ||
+                text.includes('for settings')
+            )
+        );
+    }
+
+    function hideCaptionInfoWindows(player) {
+        if (!player) return;
+
+        const captions = player.querySelectorAll('.caption-window');
+        for (const caption of captions) {
+            if (!isCaptionInfoWindow(caption)) continue;
+
+            caption.dataset.ytSubFixHiddenInfo = 'true';
+            caption.style.setProperty('display', 'none', 'important');
+            caption.style.setProperty('visibility', 'hidden', 'important');
+            caption.setAttribute('aria-hidden', 'true');
+        }
     }
 
     function isFullscreen(player) {
@@ -1445,6 +1508,8 @@
 
         const player = getPlayer();
         if (!player) return;
+
+        hideCaptionInfoWindows(player);
 
         const container = getContainer(player);
         const caption = getCaption(player);
